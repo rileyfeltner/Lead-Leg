@@ -1,0 +1,130 @@
+---
+title: "Biomechanics Data"
+author: "Riley Feltner"
+date: "2023-01-04"
+output: html_document
+---
+#Libraries
+```{r}
+library(stargazer)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+```
+
+```{r}
+Biomechanics <- read.csv("Pitching Biomechanics Data.csv")
+Clean <- na.omit(Biomechanics)
+```
+
+```{r}
+Biomechanics <- Biomechanics[-c(1)]
+```
+
+#Me messing around. Didn't use this in blog--------------------------
+#ABSORPTION
+#High (>= 75th% lead_knee_absorption_fp_br) vs Low (<= 25th% lead_hip_absorption_fp_br )
+```{r}
+quantile(Clean$lead_knee_absorption_fp_br, probs = seq(0.33,0.66, 0.33))
+#KNEE = 25%: 11.14    50%: 18.70    75%: 26.89
+#KNEE = 33%: 13.80    66%: 23.95
+
+quantile(Clean$lead_hip_absorption_fp_br, probs = seq(0.33, 0.66, 0.33))
+#HIP =  25%: 70.60    50%: 96.87    75%: 125.55
+#HIP =  33%: 81.03    66%: 111.93
+
+#Hip Absorptions       #PROBABLY ADD IN DATA WITH WEIGHT AND FILTER BY THAT FOR THIS SECTION
+#Highhip <- filter(Clean, lead_hip_absorption_fp_br >= 111.93) #66th percentile
+#mean(Highhip$pitch_speed_mph)
+
+#Lowhip <- filter(Clean, lead_hip_absorption_fp_br <= 81.03) #66th percentile
+#mean(Lowhip$pitch_speed_mph)
+
+
+#Hip and Knee Absorptions
+LowKneeHighHip <- filter(Clean, lead_knee_absorption_fp_br <= 13.80 & lead_hip_absorption_fp_br >= 111.93)
+mean(LowKneeHighHip$pitch_speed_mph)
+
+HighKneeLowHip <- filter(Clean, lead_knee_absorption_fp_br >= 23.95 & lead_hip_absorption_fp_br <= 81.03)
+mean(HighKneeLowHip$pitch_speed_mph)
+
+AboveAverageKneeBelowAverageHip <- filter(Clean, lead_knee_absorption_fp_br >= 18.70 & lead_hip_absorption_fp_br <= 96.87)
+mean(AboveAverageKneeBelowAverageHip$pitch_speed_mph)
+
+BelowAverageKneeAboveAverageHip <- filter(Clean, lead_knee_absorption_fp_br <= 18.70 & lead_hip_absorption_fp_br >= 96.87)
+mean(BelowAverageKneeAboveAverageHip$pitch_speed_mph)
+```
+
+#Correlation of Different Variables on Peak Vertical Ground Reaction Force and Velocity
+```{r}
+summary(lm(lead_grf_z_max ~ lead_knee_absorption_fp_br, data=Biomechanics))$r.squared
+summary(lm(lead_grf_z_max ~ lead_hip_absorption_fp_br, data=Biomechanics))$r.squared
+summary(lm(lead_grf_z_max ~ lead_knee_transfer_fp_br, data=Biomechanics))$r.squared
+summary(lm(lead_grf_z_max ~ lead_hip_transfer_fp_br, data=Biomechanics))$r.squared
+summary(lm(lead_grf_z_max ~ lead_knee_extension_angular_velo_max, data=Biomechanics))$r.squared
+summary(lm(lead_grf_z_max ~ lead_knee_extension_from_fp_to_br, data=Biomechanics))$r.squared
+
+
+summary(lm(pitch_speed_mph ~ lead_knee_absorption_fp_br, data=Biomechanics))$r.squared
+summary(lm(pitch_speed_mph ~ lead_hip_absorption_fp_br, data=Biomechanics))$r.squared
+summary(lm(pitch_speed_mph ~ lead_knee_transfer_fp_br, data=Biomechanics))$r.squared
+summary(lm(pitch_speed_mph ~ lead_hip_transfer_fp_br, data=Biomechanics))$r.squared
+summary(lm(pitch_speed_mph ~ lead_knee_extension_angular_velo_max, data=Biomechanics))$r.squared
+summary(lm(pitch_speed_mph ~ lead_knee_extension_from_fp_to_br, data=Biomechanics))$r.squared
+
+#Data.frame for Peak Vertical Ground Reaction Force 
+PeakVerticalGroundReactionForce <- data.frame("Variable" = c("lead_knee_absorption_fp_br",
+                                                             "lead_hip_absorption_fp_br",
+                                                             "lead_knee_transfer_fp_br",
+                                                             "lead_hip_transfer_fp_br",
+                                                             "lead_knee_extension_angular_velo_max", 
+                                                             "lead_knee_extension_from_fp_to_br"),
+                                              
+                                              "Correlation_to_lead_grf_z_max " = c("0.0007",
+                                                        "0.0684",
+                                                        "0.1260",
+                                                        "0.0096",
+                                                        "0.0485",
+                                                        "0.0127"))
+
+#Data.frame for Velocity
+Velocity <- data.frame("Variable" = c("lead_knee_absorption_fp_br",
+                                      "lead_hip_absorption_fp_br",
+                                      "lead_knee_transfer_fp_br",
+                                      "lead_hip_transfer_fp_br",
+                                      "lead_knee_extension_angular_velo_max", 
+                                      "lead_knee_extension_from_fp_to_br"),
+                       
+                                      "Correlation_to_velocity " = c("0.0162",
+                                                        "0.0360",
+                                                        "0.0412",
+                                                        "0.0258",
+                                                        "0.0130",
+                                                        "0.0483"))
+
+```
+
+#plot lead_grf_z_max ~ pitch_speed_mph
+```{r}
+#Linear
+  ggplot(data = Biomechanics, aes(x = lead_grf_z_max, y = pitch_speed_mph)) +
+  geom_point(color = "blue")+
+  geom_smooth(method = "lm", se=FALSE, color="black", formula = y ~ x) +
+  labs(title = "Lead Leg Vertical Ground Reaction Force and Velocity Linear Regression",
+       y = "Velocity",
+       x = "Lead Leg Vertical Ground Reaction Force",
+       caption = "Data: Driveline Baseball | Riley Feltner")+
+  theme_minimal()+
+  stat_cor(aes(label = ..rr.label..), color = "red", geom = "label", label.y.npc = "top")
+
+#Non Linear
+  ggplot(data = Biomechanics, aes(x = lead_grf_z_max, y = pitch_speed_mph)) +
+  geom_point(color = "blue")+
+  geom_smooth(se = FALSE, color = "black") +
+  labs(title = "Lead Leg Vertical Ground Reaction Force and Velocity",
+       y = "Velocity",
+       x = "Lead Leg Vertical Ground Reaction Force",
+       caption = "Data: Driveline Baseball | Riley Feltner")+
+  theme_minimal()
+```
+
